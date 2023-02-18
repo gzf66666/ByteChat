@@ -1,11 +1,11 @@
 # -
 基于muduo网络库的集群聊天服务器
 
-作者：shenmingik
+作者：gzf66666
 
-邮箱：2107810343@qq.com
+邮箱：gzf66666@foxmail.com
 
-时间：2021/1/26 22:17
+时间：2022/2/26 22:17
 
 开发环境：Ubuntu VS Code
 
@@ -14,9 +14,6 @@
 数据库：MySQL
 
 编程语言：C++
-
-源码连接：
-[微云链接](https://share.weiyun.com/PTtAqitJ)
 
 # 项目概述
 ## 业务流程
