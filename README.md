@@ -1,11 +1,10 @@
-# -
+ # 基于muduo网络库的集群聊天服务器
+
 基于muduo网络库的集群聊天服务器
 
 作者：gzf66666
 
 邮箱：gzf66666@foxmail.com
-
-时间：2022/2/26 22:17
 
 开发环境：Ubuntu VS Code
 
@@ -16,9 +15,11 @@
 编程语言：C++
 
 # 项目概述
+
 ## 业务流程
+
 项目大概是模仿QQ去实现一个通讯工具，主要业务分为注册、登录、加好友、查看离线消息、一对一群聊、创建群、加入群、群聊等，详细业务流程关系如下图：
-![在这里插入图片描述](https://img-blog.csdnimg.cn/2021012713535628.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoZW5taW5neHVlSVQ=,size_16,color_FFFFFF,t_70)
+![image-20230218163255187](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\image-20230218163255187.png)
 
 既然是模仿QQ，那么就要有客户端，服务端，存储数据的数据库。这样的话，我们就可以采用MVC架构。
 
@@ -31,7 +32,9 @@
 - 既然是集群，跨服务器通信又该怎么解决？
 
 # 数据模块
+
 ## 表的设计
+
 首先就是要解决数据的问题，作为一个聊天系统，我们的服务器端肯定要有用户的信息，比如说账号，用户名，密码等。
 在**登录**的时候，我们可以查询这个表里面的信息对用户身份进行验证，在**注册**的时候，我们则可以往表里面去写入数据。
 
@@ -63,11 +66,12 @@
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/20210127150030734.png)
 
 ## 数据库模块设计
+
 在`/include/db/MySQL.hpp`文件中，封装着对数据库的连接、查询、更新、释放连接几个操作。
 
 其是数据库模块中设计的最底层，为上层各个表以及其操作模块提供基础的服务。其关系图如下所示：
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20210127151155139.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoZW5taW5neHVlSVQ=,size_16,color_FFFFFF,t_70)
+![image-20230218164125540](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\image-20230218164125540.png)
 
 这里要解释几点：
 
@@ -76,6 +80,7 @@
 - 这些类都在`/include/model`里面
 
 # 通信格式
+
 服务器和客户端的通信采用了JSON来完成数据在网络中的标准传输。
 
 对于不同的数据则是采用了不同的格式，具体如下：
@@ -145,11 +150,14 @@ json["id"]			//要注销的id
 ```
 
 这里要解释一下：
+
 - `msgid`字段代表着业务类型，这个在`/include/public.hpp`文件中有详细解释。
 - 我们这里并没有User表中的`state`字段，这是因为，这个表示用户是否在线的字段会被服务器自动设置，当用户登录会被设置成online，用户下线或者服务器异常则会被设置成offline
 
 # 网络和业务模块
+
 ## 网络模块
+
 在这里网络模块我没有自己去`socket+epoll`这样造轮子，而是选择直接使用了muduo网络库提供的接口。
 
 使用muduo网络库有很多好处：
@@ -171,6 +179,7 @@ server_.setConnectionCallback(bind(&ChatServer::on_connection, this, _1));
 //注册消息回调
 server_.setMessageCallback(bind(&ChatServer::on_message, this, _1, _2, _3));
 ```
+
 在这里，我直接和我设置一个处理有关连接事件的方法和处理读写事件的方法。
 
 ```cpp
@@ -186,6 +195,7 @@ void on_message(const TcpConnectionPtr &, Buffer *, Timestamp);
 发生读写事件时，则会调用on_message方法，执行对象为sub reactor，其内容与网络模块和业务模块解耦合至关重要！！！
 
 ## 网络模块和业务模块解耦合
+
 在**通信模块**中，有一个字段`msgid`，其代表着服务器和客户端通信的消息类型，值是一个枚举类型，保存在`/include/public.hpp`文件中，总共有10个取值：
 
 ```cpp
@@ -227,7 +237,9 @@ auto msg_handler = ChatService::instance()->get_handler(js["msgid"].get<int>());
 
 msg_handler(conn, js, time);
 ```
+
 ## 业务模块
+
 由于与网络模块的解耦，在业务模块我们就不用去关系网络上所发生的事情，专注业务便可。
 
 具体业务相关的数据结构如下：
@@ -245,9 +257,11 @@ GroupModel group_model_;
 ```
 
 ### 注册业务
+
 当服务器接收到 json 字符串的时候，对其进行反序列化，得到要注册的信息，然后写入到User表中，成功就将id号返回，失败就把errno字段设置为1。
 
 ### 登录业务
+
 当服务器接收到 json 字符串的时候，对其进行反序列化，得到用户传递过来的账号和密码信息。
 
 首先就是检测这个账号和密码是否与服务器中的数据匹配，如果不匹配就把errno设置为1并返回 id or password error的错误信息。
@@ -257,51 +271,60 @@ GroupModel group_model_;
 如果用户不在线，这个时候用户就是**登陆成功**了，这个时候服务器就把该用户的**好友列表，群组列表**以及**离线消息**都推送给该用户。
 
 ### 加好友业务
+
 这个业务很简单，服务器得到反序列化的信息，然后将这个信息写入Friend表中即可。
 
 ### 一对一聊天业务
+
 服务器接收到客户端的信息，然后去本服务器的`user_connection_map_`接受信息的用户是否在本服务器在线，在线的话直接转发即可，不在线的话，看看数据库里面的信息是否是在线，如果在线，那么就是接收用户在其他服务器登录，将消息通过redis中间件转发即可。
 
 如果均不在线，转储离线消息即可。
 
 ### 创建群业务
+
 服务器接收到客户端的信息，把群组的信息写入到AllGroup表中，并将创建者的信息写入到GroupUser中，设置创建者为creator
 
 ### 加入群业务
+
 服务器接收到客户端的信息，将用户数据写入到GroupUser表中，并将role角色设置为normal。
 
 ### 群聊业务
+
 服务器接收到客户端的信息，先去GroupUser查询到所有群员的id，然后一个个去本服务器的`user_connection_map_`接受信息的用户是否在本服务器在线，在线的话直接转发即可，不在线的话，看看数据库里面的信息是否是在线，如果在线，那么就是接收用户在其他服务器登录，将消息通过redis中间件转发即可。
 
 如果均不在线，转储离线消息即可。
 
 ### 注销业务
+
 服务器收到客户端发来的信息，将该用户在User表中所对应的state改为offline。
 
 # 服务器集群
+
 一般来说，一台服务器只能支持1~2w的并发量，但是这是远远不够的，我们需要更高的并发量支持，这个时候就需要引入Nginx tcp长连接负载均衡算法。
 
 当一个新的客户端连接到来时，负载均衡模块便会根据我们在nginx.conf里面设置的参数来分配服务器资源。
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20210127200450432.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoZW5taW5neHVlSVQ=,size_16,color_FFFFFF,t_70)
+![image-20230218163347859](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\image-20230218163347859.png)
 
 按图中所示，客户端只用连接我们的负载均衡服务器，然后服务器就会自动把client连接分配到对应的server服务器。
 
 # 跨服务器通信
+
 如果我一个在server1的用户想要给在server2的用户发送消息要怎么办呢？
 
 是像下面这样把每个服务器连接起来么？
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20210127201004249.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoZW5taW5neHVlSVQ=,size_16,color_FFFFFF,t_70)
+![image-20230218163424616](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\image-20230218163424616.png)
 这样肯定不行，服务器之间关联性太强了，一旦多加一个服务器，以前的服务器都要增加一条指向它的连接。
 
 所以，我们可以借鉴交换机连接PC的思想，引入Redis消息队列中间件！
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20210127201649999.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3NoZW5taW5neHVlSVQ=,size_16,color_FFFFFF,t_70)
+![image-20230218163441606](C:\Users\Lenovo\AppData\Roaming\Typora\typora-user-images\image-20230218163441606.png)
 
 当客户端登录的时候，服务器吧它的id号 subscribe到redis中间件，表示该服务器对这个id发生的事件感兴趣，而Redis收到发送给该id的消息时就会 把消息转发到这个服务器上。
 
 # 集群聊天服务器的思考
+
 服务器设计上还是存在一些问题的：
 
 - 如果服务器宕机，正在连接该服务的用户数据怎么办？
@@ -309,5 +332,3 @@ GroupModel group_model_;
 - 服务器和文件服务器是直接连接查询还是服务器存储一部分信息然后隔段时间同步一下
 - 加好友的时候应该像QQ那样发送请求，然后等待对方接受再写入
 
-# 参考文献
-	[1] 施磊．集群聊天服务器．图论科技.2020.7．
